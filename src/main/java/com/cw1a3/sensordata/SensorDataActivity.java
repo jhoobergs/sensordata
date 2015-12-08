@@ -7,6 +7,7 @@ import android.hardware.SensorManager;
 import android.location.Location;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -35,22 +36,31 @@ public class SensorDataActivity extends AppCompatActivity implements GoogleApiCl
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        createLocationRequest();
+        sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+
+    }
+
+    public void enableAccelerometerSensor(){
+        sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER),
+                SensorManager.SENSOR_DELAY_NORMAL);
+    }
+
+    public void enableProximitySensor(){
+        sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY),
+                SensorManager.SENSOR_DELAY_NORMAL);
+    }
+
+    public void enableLightSensor(){
+        sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT),
+                SensorManager.SENSOR_DELAY_NORMAL);
+    }
+
+    public void enableLocationUpdates(int interval, int fastestInterval){
+        createLocationRequest(interval,fastestInterval);
         buildGoogleApiClient();
         if (mGoogleApiClient.isConnected() && !mRequestingLocationUpdates) {
             startLocationUpdates();
         }
-
-        sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
-        sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER),
-                sensorManager.SENSOR_DELAY_NORMAL);
-
-        sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY),
-                sensorManager.SENSOR_DELAY_NORMAL);
-
-        sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT),
-                sensorManager.SENSOR_DELAY_NORMAL);
-
     }
 
     public void setSensorDataInterface(SensorDataInterface listener){
@@ -69,10 +79,10 @@ public class SensorDataActivity extends AppCompatActivity implements GoogleApiCl
                 .build();
     }
 
-    protected void createLocationRequest() {
+    protected void createLocationRequest(int interval, int fastestInterval) {
         mLocationRequest = new LocationRequest();
-        mLocationRequest.setInterval(2000);
-        mLocationRequest.setFastestInterval(1000);
+        mLocationRequest.setInterval(interval);
+        mLocationRequest.setFastestInterval(fastestInterval);
         mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
     }
 
@@ -115,15 +125,15 @@ public class SensorDataActivity extends AppCompatActivity implements GoogleApiCl
     @Override
     protected void onPause() {
         super.onPause();
-        stopLocationUpdates();
+        //stopLocationUpdates();
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        if (mGoogleApiClient.isConnected() && !mRequestingLocationUpdates) {
+        /*if (mGoogleApiClient.isConnected() && !mRequestingLocationUpdates) {
             startLocationUpdates();
-        }
+        }*/
     }
 
     protected void stopLocationUpdates() {
@@ -138,33 +148,27 @@ public class SensorDataActivity extends AppCompatActivity implements GoogleApiCl
 
         int type = event.sensor.getType();
         if (type == Sensor.TYPE_ACCELEROMETER) {
-            float x = event.values[0];
-            float y = event.values[1];
-            float z = event.values[2];
             if(sensorDataInterface != null)
-                sensorDataInterface.accelerometerChanged(x, y, z);
+                sensorDataInterface.accelerometerChanged(event.values[0], event.values[1], event.values[2]);
         } else if (type == Sensor.TYPE_PROXIMITY) {
-
-            float proximity = event.values[0];
             if(sensorDataInterface != null)
-                sensorDataInterface.proximityChanged(proximity);
+                sensorDataInterface.proximityChanged(event.values[0]);
         }
         else if (type == Sensor.TYPE_LIGHT) {
-
-            float sv = event.values[0];
             if(sensorDataInterface != null)
-                sensorDataInterface.lightChanged(sv);
+                sensorDataInterface.lightChanged(event.values[0]);
         }
     }
 
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
-
+        Log.d("sensor", String.format("accuracy %s", sensor.getName()));
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
         sensorManager.unregisterListener(this);
+        stopLocationUpdates();
     }
 }
